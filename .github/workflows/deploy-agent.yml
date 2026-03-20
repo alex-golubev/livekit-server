@@ -1,0 +1,99 @@
+name: Deploy Agent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agent/**'
+      - 'deploy/compose.yaml'
+      - '.github/workflows/deploy-agent.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-agent
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/livekit-agent
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push agent image
+        uses: docker/build-push-action@v7
+        with:
+          context: agent
+          file: agent/Dockerfile
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:latest
+          provenance: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Copy compose file to VPS
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: 'deploy/compose.yaml'
+          target: /opt/livekit
+          strip_components: 1
+
+      - name: Graceful rolling deploy
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/livekit
+            OLD=$(docker compose ps -q agent)
+            docker compose pull agent
+            docker compose up -d --no-recreate --scale agent=2
+            sleep 10
+            if [ -n "$OLD" ]; then
+              nohup sh -c "
+                docker stop --time 900 $OLD
+                docker rm $OLD 2>/dev/null
+                cd /opt/livekit
+                docker compose up -d --no-recreate --scale agent=1
+                docker image prune -f
+              " > /tmp/agent-drain.log 2>&1 &
+            else
+              docker compose up -d --no-recreate --scale agent=1
+              docker image prune -f
+            fi
+
+  cleanup-ghcr:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete untagged image versions
+        uses: actions/delete-package-versions@v5
+        with:
+          package-name: livekit-agent
+          package-type: container
+          delete-only-untagged-versions: true
+          token: ${{ secrets.GHCR_PAT }}

@@ -1,0 +1,7 @@
+{$LIVEKIT_DOMAIN} {
+	reverse_proxy livekit-server:7880
+}
+
+{$GRAFANA_DOMAIN} {
+	reverse_proxy grafana:3000
+}

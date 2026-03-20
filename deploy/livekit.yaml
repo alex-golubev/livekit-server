@@ -1,0 +1,40 @@
+# Production LiveKit Server Configuration
+# Replace <API_KEY> and <API_SECRET> with your own values before deploying.
+# Generate a secure keypair: openssl rand -hex 24
+
+port: 7880
+bind_addresses:
+  - ''
+
+rtc:
+  port_range_start: 50000
+  port_range_end: 50060
+  use_external_ip: true
+  tcp_port: 7881
+
+keys:
+  # Replace with your own key/secret pair
+  <API_KEY>: <API_SECRET>
+
+turn:
+  enabled: true
+  # Set to your LiveKit domain (e.g. livekit.sonavera.com)
+  domain: <LIVEKIT_DOMAIN>
+  udp_port: 3478
+
+redis:
+  address: redis:6379
+
+room:
+  empty_timeout: 300
+  max_participants: 10
+
+prometheus_port: 6789
+
+logging:
+  level: info
+
+# webhook:
+#   urls:
+#     - https://your-app.com/api/livekit-webhook
+#   api_key: <API_KEY>

@@ -1,0 +1,25 @@
+{
+  "name": "livekit-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@livekit/agents": "^1.x",
+    "@livekit/agents-plugin-google": "^1.x",
+    "effect": "^3.19.19"
+  },
+  "devDependencies": {
+    "@effect/vitest": "^0.27.0",
+    "tsx": "^4.x",
+    "typescript": "^5.x",
+    "vitest": "^3.x"
+  },
+  "scripts": {
+    "dev": "tsx --env-file=.env src/agent.ts dev",
+    "build": "tsc",
+    "start": "node dist/agent.js start",
+    "download-files": "tsc && node dist/agent.js download-files",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  }
+}

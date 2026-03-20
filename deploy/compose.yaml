@@ -1,0 +1,122 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - LIVEKIT_DOMAIN=${LIVEKIT_DOMAIN}
+      - GRAFANA_DOMAIN=${GRAFANA_DOMAIN}
+    depends_on:
+      livekit-server:
+        condition: service_healthy
+    networks:
+      - livekit-net
+
+  livekit-server:
+    image: livekit/livekit-server:v1.9.11
+    restart: unless-stopped
+    command: --config /etc/livekit.yaml --node-ip=${NODE_IP:-0.0.0.0}
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      - '7881:7881/tcp'
+      - '3478:3478/udp'
+      - '50000-50060:50000-50060/udp'
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:7880 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - livekit-net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: redis-cli ping | grep -q PONG
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - livekit-net
+
+  agent:
+    image: ghcr.io/alex-golubev/livekit-agent:latest
+    restart: unless-stopped
+    stop_grace_period: 15m
+    environment:
+      - LIVEKIT_URL=ws://livekit-server:7880
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-}
+      - GEMINI_VOICE=${GEMINI_VOICE:-}
+      - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-}
+    depends_on:
+      livekit-server:
+        condition: service_healthy
+    networks:
+      - livekit-net
+
+  node-exporter:
+    image: prom/node-exporter:v1.10.2
+    restart: unless-stopped
+    command: --path.rootfs=/host
+    volumes:
+      - /:/host:ro
+    pid: host
+    networks:
+      - livekit-net
+
+  prometheus:
+    image: prom/prometheus:v3.10.0
+    restart: unless-stopped
+    command: --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.retention.time=30d
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      livekit-server:
+        condition: service_healthy
+    networks:
+      - livekit-net
+
+  grafana:
+    image: grafana/grafana:12.4.0
+    restart: unless-stopped
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_SERVER_ROOT_URL=https://${GRAFANA_DOMAIN}
+    depends_on:
+      - prometheus
+    networks:
+      - livekit-net
+
+volumes:
+  caddy-data:
+  caddy-config:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  livekit-net:
+    driver: bridge

@@ -1,0 +1,59 @@
+import { describe, expect, vi } from 'vitest'
+import { it as effectIt } from '@effect/vitest'
+import { Effect, Layer } from 'effect'
+import { ModelConfig, type ModelConfigShape } from './config.js'
+import { GeminiModel, GeminiModelLive } from './gemini.js'
+
+const { RealtimeModelMock } = vi.hoisted(() => ({
+  RealtimeModelMock: vi.fn()
+}))
+
+vi.mock('@livekit/agents-plugin-google', () => ({
+  beta: {
+    realtime: {
+      RealtimeModel: RealtimeModelMock
+    }
+  }
+}))
+
+const testModelConfig: ModelConfigShape = {
+  model: 'test-model',
+  voice: 'TestVoice',
+  temperature: 0.5
+}
+
+const TestModelConfig = Layer.succeed(ModelConfig, testModelConfig)
+
+const resolveModel = GeminiModel.pipe(Effect.provide(GeminiModelLive), Effect.provide(TestModelConfig))
+
+describe('GeminiModelLive', () => {
+  effectIt.effect('constructs RealtimeModel with correct config', () =>
+    Effect.gen(function* () {
+      RealtimeModelMock.mockReturnValue({ fake: true })
+      yield* resolveModel
+
+      expect(RealtimeModelMock).toHaveBeenCalledWith({
+        model: 'test-model',
+        voice: 'TestVoice',
+        temperature: 0.5,
+        enableAffectiveDialog: true,
+        inputAudioTranscription: {},
+        outputAudioTranscription: {}
+      })
+    })
+  )
+
+  effectIt.effect('maps constructor throw to GeminiConnectionError', () =>
+    Effect.gen(function* () {
+      const cause = new Error('API key invalid')
+      RealtimeModelMock.mockImplementation(() => {
+        throw cause
+      })
+
+      const error = yield* resolveModel.pipe(Effect.flip)
+
+      expect(error._tag).toBe('GeminiConnectionError')
+      expect(error.cause).toBe(cause)
+    })
+  )
+})
