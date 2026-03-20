@@ -4,16 +4,16 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@livekit/agents": "^1.x",
-    "@livekit/agents-plugin-google": "^1.x",
-    "effect": "^3.19.19"
+    "@livekit/agents": "^1.2.0",
+    "@livekit/agents-plugin-google": "^1.2.0",
+    "effect": "^3.21.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.8",
     "@effect/vitest": "^0.27.0",
-    "tsx": "^4.x",
-    "typescript": "^5.x",
-    "vitest": "^3.x"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
   },
   "scripts": {
     "dev": "tsx --env-file=.env src/agent.ts dev",

@@ -88,7 +88,7 @@ const startSession = (ctx: JobContext, attributes: Record<string, string>, model
  *
  * Orchestrates: {@link connectToRoom} → ({@link waitForParticipant} ‖ {@link resolveModel}) → {@link startSession}.
  */
-const makeProgram = (ctx: JobContext) =>
+export const makeProgram = (ctx: JobContext) =>
   connectToRoom(ctx).pipe(
     Effect.andThen(
       Effect.all({ participant: waitForParticipant(ctx), model: resolveModel }, { concurrency: 'unbounded' })

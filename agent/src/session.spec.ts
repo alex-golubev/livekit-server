@@ -1,7 +1,7 @@
 import { it as effectIt } from '@effect/vitest'
 import type { JobContext } from '@livekit/agents'
 import type * as google from '@livekit/agents-plugin-google'
-import { Effect, Layer, Logger, LogLevel } from 'effect'
+import { Cause, Effect, Exit, Fiber, Layer, Logger, LogLevel, Option, TestClock } from 'effect'
 import { beforeEach, describe, expect, type MockInstance, vi } from 'vitest'
 import { TutorConfig, type TutorConfigShape } from './config.js'
 import { GeminiModel } from './gemini.js'
@@ -157,6 +157,68 @@ describe('LiveKitSessionLive', () => {
         // Session was never created, so close should NOT be called on it
         expect(AgentSessionMock.proto.close).not.toHaveBeenCalled()
         // Model should still be cleaned up
+        expect((model as unknown as { close: MockInstance }).close).toHaveBeenCalled()
+      })
+    )
+  })
+
+  describe('timeout', () => {
+    effectIt.effect('fires TimeoutError when session.start() hangs', () =>
+      Effect.gen(function* () {
+        AgentSessionMock.proto.start.mockReturnValue(new Promise(() => {}))
+
+        const fiber = yield* runSession(ctx, model).pipe(Effect.fork)
+        yield* TestClock.adjust('20 seconds')
+        const exit = yield* Fiber.await(fiber)
+
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) {
+          const error = Cause.failureOption(exit.cause).pipe(Option.getOrNull)
+          expect(error?._tag).toBe('TimeoutError')
+        }
+        // Cleanup should have been triggered
+        expect((model as unknown as { close: MockInstance }).close).toHaveBeenCalled()
+      })
+    )
+  })
+
+  describe('event handlers', () => {
+    effectIt.effect('error handler can be invoked without throwing', () =>
+      Effect.gen(function* () {
+        yield* runSession(ctx, model)
+
+        const onCalls: unknown[][] = AgentSessionMock.proto.on.mock.calls
+        const errorHandler = onCalls.find((c) => c[0] === 'error')?.[1] as (...args: unknown[]) => void
+
+        expect(() =>
+          errorHandler({
+            error: { error: new Error('test error') },
+            source: { constructor: { name: 'TestSource' } }
+          })
+        ).not.toThrow()
+      })
+    )
+
+    effectIt.effect('close handler can be invoked without throwing', () =>
+      Effect.gen(function* () {
+        yield* runSession(ctx, model)
+
+        const onCalls: unknown[][] = AgentSessionMock.proto.on.mock.calls
+        const closeHandler = onCalls.find((c) => c[0] === 'close')?.[1] as (...args: unknown[]) => void
+
+        expect(() => closeHandler({ reason: 'normal', error: null })).not.toThrow()
+      })
+    )
+  })
+
+  describe('shutdown callback', () => {
+    effectIt.effect('closes the RealtimeModel when invoked', () =>
+      Effect.gen(function* () {
+        yield* runSession(ctx, model)
+
+        const callback = (ctx.addShutdownCallback as unknown as MockInstance).mock.calls[0][0] as () => Promise<void>
+        yield* Effect.promise(() => callback())
+
         expect((model as unknown as { close: MockInstance }).close).toHaveBeenCalled()
       })
     )
