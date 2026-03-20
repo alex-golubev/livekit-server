@@ -89,11 +89,15 @@ jobs:
 
       - name: Graceful rolling deploy
         uses: appleboy/ssh-action@v1.2.5
+        env:
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GHCR_PAT
           script: |
+            echo "$GHCR_PAT" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             cd /opt/livekit
             OLD=$(docker compose ps -q agent)
             docker compose pull agent
