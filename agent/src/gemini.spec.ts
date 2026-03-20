@@ -1,6 +1,6 @@
-import { describe, expect, vi } from 'vitest'
 import { it as effectIt } from '@effect/vitest'
 import { Effect, Layer } from 'effect'
+import { describe, expect, vi } from 'vitest'
 import { ModelConfig, type ModelConfigShape } from './config.js'
 import { GeminiModel, GeminiModelLive } from './gemini.js'
 

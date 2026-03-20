@@ -66,6 +66,12 @@ services:
       - GEMINI_MODEL=${GEMINI_MODEL:-}
       - GEMINI_VOICE=${GEMINI_VOICE:-}
       - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-}
+    healthcheck:
+      test: node -e "fetch('http://localhost:8081/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       livekit-server:
         condition: service_healthy

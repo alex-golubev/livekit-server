@@ -1,5 +1,5 @@
-import { Context, Effect, Layer } from 'effect'
 import * as google from '@livekit/agents-plugin-google'
+import { Context, Effect, Layer } from 'effect'
 import { ModelConfig } from './config.js'
 import { GeminiConnectionError } from './errors.js'
 

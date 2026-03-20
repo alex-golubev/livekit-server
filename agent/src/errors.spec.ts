@@ -1,3 +1,4 @@
+import { APIStatusError } from '@livekit/agents'
 import { describe, expect, it } from 'vitest'
 import {
   ConfigError,
@@ -56,5 +57,31 @@ describe('isRetriable', () => {
     { name: 'TimeoutError', error: new TimeoutError({ message: 'x', operation: 'op' }) }
   ])('returns true for $name', ({ error }) => {
     expect(isRetriable(error)).toBe(true)
+  })
+
+  it('returns false for GeminiConnectionError with 401 APIStatusError cause', () => {
+    const cause = new APIStatusError({ message: 'Unauthorized', options: { statusCode: 401 } })
+    expect(isRetriable(new GeminiConnectionError({ message: 'x', cause }))).toBe(false)
+  })
+
+  it('returns false for GeminiConnectionError with 403 APIStatusError cause', () => {
+    const cause = new APIStatusError({ message: 'Forbidden', options: { statusCode: 403 } })
+    expect(isRetriable(new GeminiConnectionError({ message: 'x', cause }))).toBe(false)
+  })
+
+  it('returns true for GeminiConnectionError with 429 APIStatusError cause', () => {
+    const cause = new APIStatusError({ message: 'Rate limited', options: { statusCode: 429, retryable: true } })
+    expect(isRetriable(new GeminiConnectionError({ message: 'x', cause }))).toBe(true)
+  })
+
+  it('returns true for GeminiConnectionError with generic Error cause', () => {
+    expect(isRetriable(new GeminiConnectionError({ message: 'x', cause: new Error('network') }))).toBe(true)
+  })
+
+  it('returns false for SessionStartError with nested non-retryable cause', () => {
+    const apiError = new APIStatusError({ message: 'Invalid key', options: { statusCode: 401 } })
+    const wrapper = new Error('SDK wrapper')
+    wrapper.cause = apiError
+    expect(isRetriable(new SessionStartError({ message: 'x', cause: wrapper }))).toBe(false)
   })
 })

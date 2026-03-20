@@ -1,4 +1,5 @@
-import { Data } from 'effect'
+import { isAPIError } from '@livekit/agents'
+import { Data, Option, type Predicate } from 'effect'
 
 /** Invalid or missing participant attributes. */
 export class ConfigError extends Data.TaggedError('ConfigError')<{
@@ -53,5 +54,20 @@ export type TransientError =
   | ConnectionError
   | TimeoutError
 
+/** True if the error is an SDK APIError marked as permanently non-retryable (e.g. 401, 403). */
+const isPermanentAPIError: Predicate.Predicate<unknown> = (u) => isAPIError(u) && !u.retryable
+
+/** Extracts the next link in the Error cause chain, if any. */
+const nextCause = (error: unknown): Option.Option<unknown> =>
+  Option.fromNullable(error instanceof Error ? error.cause : undefined)
+
+/**
+ * Recursively walks the cause chain looking for a permanent (non-retryable) API error.
+ * 429 (rate limit) is retryable per SDK convention and will not match.
+ */
+const hasPermanentCause = (cause: unknown): boolean =>
+  isPermanentAPIError(cause) || Option.match(nextCause(cause), { onNone: () => false, onSome: hasPermanentCause })
+
 /** Type guard: true for errors worth retrying. */
-export const isRetriable = (error: AgentError): error is TransientError => error._tag !== 'ConfigError'
+export const isRetriable = (error: AgentError): error is TransientError =>
+  error._tag !== 'ConfigError' && !('cause' in error && hasPermanentCause(error.cause))

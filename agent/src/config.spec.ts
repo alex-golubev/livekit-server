@@ -1,7 +1,7 @@
-import { afterEach, describe, expect, vi } from 'vitest'
 import { it as effectIt } from '@effect/vitest'
 import { Effect } from 'effect'
-import { ModelConfig, ModelConfigLive, TutorConfig, makeTutorConfigLive } from './config.js'
+import { afterEach, describe, expect, vi } from 'vitest'
+import { ModelConfig, ModelConfigLive, makeTutorConfigLive, TutorConfig } from './config.js'
 import { ConfigError } from './errors.js'
 
 /** Resolve ModelConfig from env. */

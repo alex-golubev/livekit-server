@@ -9,6 +9,7 @@
     "effect": "^3.19.19"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.8",
     "@effect/vitest": "^0.27.0",
     "tsx": "^4.x",
     "typescript": "^5.x",
@@ -20,6 +21,8 @@
     "start": "node dist/agent.js start",
     "download-files": "tsc && node dist/agent.js download-files",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check",
+    "lint:fix": "biome check --write"
   }
 }

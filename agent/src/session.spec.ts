@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, type MockInstance, vi } from 'vitest'
 import { it as effectIt } from '@effect/vitest'
-import { Effect, Layer, Logger, LogLevel } from 'effect'
 import type { JobContext } from '@livekit/agents'
 import type * as google from '@livekit/agents-plugin-google'
+import { Effect, Layer, Logger, LogLevel } from 'effect'
+import { beforeEach, describe, expect, type MockInstance, vi } from 'vitest'
 import { TutorConfig, type TutorConfigShape } from './config.js'
 import { GeminiModel } from './gemini.js'
 import { LiveKitSession, LiveKitSessionLive } from './session.js'
@@ -82,7 +82,7 @@ describe('LiveKitSessionLive', () => {
       Effect.gen(function* () {
         yield* runSession(ctx, model)
 
-        const startCall = AgentSessionMock.proto.start.mock.calls[0]![0]
+        const startCall = AgentSessionMock.proto.start.mock.calls[0]?.[0]
         expect(startCall.room).toBe(ctx.room)
         expect(AgentMock).toHaveBeenCalledWith({ instructions: 'test system prompt' })
       })

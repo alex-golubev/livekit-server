@@ -1,13 +1,13 @@
-import { Cause, Context, Effect, Layer, Option, Ref, Runtime } from 'effect'
-import { voice } from '@livekit/agents'
 import type { JobContext } from '@livekit/agents'
-import * as google from '@livekit/agents-plugin-google'
+import { voice } from '@livekit/agents'
+import type * as google from '@livekit/agents-plugin-google'
+import { Cause, Context, Effect, Layer, Option, Ref, Runtime } from 'effect'
 import { TutorConfig, type TutorConfigShape } from './config.js'
-import { GeminiModel } from './gemini.js'
 import { SessionStartError, TimeoutError } from './errors.js'
+import { GeminiModel } from './gemini.js'
 
 /** Timeout for the full session start pipeline (connect to Gemini and initial greeting). */
-const SESSION_START_TIMEOUT = '10 seconds' as const
+const SESSION_START_TIMEOUT = '20 seconds' as const
 
 /** Timeout for best-effort resource close operations (AgentSession, RealtimeModel). */
 const CLOSE_TIMEOUT = '5 seconds' as const

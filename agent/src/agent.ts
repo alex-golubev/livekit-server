@@ -1,17 +1,22 @@
-import { defineAgent, cli, ServerOptions, type JobContext } from '@livekit/agents'
 import { fileURLToPath } from 'node:url'
-import { Effect, Layer, Logger, LogLevel, Schedule } from 'effect'
+import { cli, defineAgent, type JobContext, ServerOptions } from '@livekit/agents'
 import type * as google from '@livekit/agents-plugin-google'
-import { makeTutorConfigLive, ModelConfigLive, TutorConfig } from './config.js'
+import { Effect, Layer, Logger, LogLevel, Schedule } from 'effect'
+import { ModelConfigLive, makeTutorConfigLive, TutorConfig } from './config.js'
+import { ConnectionError, isRetriable, ParticipantError, TimeoutError } from './errors.js'
 import { GeminiModel, GeminiModelLive } from './gemini.js'
 import { LiveKitSession, LiveKitSessionLive } from './session.js'
-import { ConnectionError, ParticipantError, TimeoutError, isRetriable } from './errors.js'
 
 /** Timeout durations for async pipeline steps. */
+// TODO(metrics): The @livekit/agents SDK supports OpenTelemetry via
+// metrics.AgentMetrics/RealtimeModelMetrics and telemetry.setTracerProvider().
+// To enable: add an OTLP collector (e.g. Grafana Alloy) to compose.yaml,
+// configure telemetry.setTracerProvider() here, and set up Prometheus remote-write.
+
 const TIMEOUTS = {
   connect: '5 seconds',
   waitForParticipant: '30 seconds',
-  pipeline: '60 seconds'
+  pipeline: '120 seconds'
 } as const
 
 /** 1 retry, exponential backoff (1s + jitter). 2 total attempts. */
