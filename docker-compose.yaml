@@ -5,7 +5,7 @@
 #   docker compose up
 #
 # Then in agent/:
-#   cp .env.example .env # fill in GOOGLE_API_KEY and match keys below
+#   cp .env.example .env  # fill in GOOGLE_CLOUD_PROJECT, GOOGLE_APPLICATION_CREDENTIALS and match keys below
 #   pnpm dev
 
 services:

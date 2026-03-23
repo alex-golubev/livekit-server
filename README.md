@@ -1,14 +1,14 @@
 # LiveKit Server
 
-Voice agent powered by [LiveKit Agents](https://docs.livekit.io/agents/) and Google Gemini, with a full production deployment stack.
+Voice agent powered by [LiveKit Agents](https://docs.livekit.io/agents/) and Vertex AI Gemini, with a full production deployment stack.
 
 ## Architecture
 
 ```
-Browser ↔ LiveKit Server ↔ Agent ↔ Gemini (speech-to-speech)
+Browser ↔ LiveKit Server ↔ Agent ↔ Vertex AI Gemini (speech-to-speech)
 ```
 
-The agent connects to a LiveKit room, waits for a participant, then starts a real-time voice session via Gemini's native audio API. It acts as a language conversation partner — adjusting complexity based on the student's proficiency level.
+The agent connects to a LiveKit room, waits for a participant, then starts a real-time voice session via Vertex AI Gemini Live API. It acts as a language conversation partner — adjusting complexity based on the student's proficiency level.
 
 **Stack:** Node.js, TypeScript, [Effect](https://effect.website), Docker Compose, Caddy, Redis, Prometheus, Grafana.
 
@@ -42,7 +42,7 @@ deploy/              Production infrastructure
 
 ```bash
 cd agent
-cp .env.example .env   # fill in credentials
+cp .env.example .env    # fill in GCP project and credentials
 pnpm install
 pnpm dev
 ```
@@ -76,7 +76,7 @@ mkdir -p /opt/livekit
 nano /opt/livekit/.env
 ```
 
-2. Fill in all values (see [`deploy/env.example`](deploy/env.example) for reference):
+2. Fill in all values (see [`deploy/env.example`](deploy/.env.example) for reference):
 
 ```env
 NODE_IP=<server public IP>
@@ -85,12 +85,14 @@ LIVEKIT_API_KEY=<openssl rand -hex 24>
 LIVEKIT_API_SECRET=<openssl rand -hex 24>
 GRAFANA_DOMAIN=grafana.example.com
 GF_SECURITY_ADMIN_PASSWORD=<password>
-GOOGLE_API_KEY=<Google AI Studio key>
+GOOGLE_CLOUD_PROJECT=<GCP project ID>
 ```
 
-3. Edit `deploy/livekit.yaml` — replace `<API_KEY>`, `<API_SECRET>`, and `<LIVEKIT_DOMAIN>` with the same values.
+3. Copy the GCP service account credentials JSON to `/opt/livekit/credentials.json`.
 
-4. Push to `main` — CI will build the agent image and deploy everything.
+4. Edit `deploy/livekit.yaml` — replace `<API_KEY>`, `<API_SECRET>`, and `<LIVEKIT_DOMAIN>` with the same values.
+
+5. Push to `main` — CI will build the agent image and deploy everything.
 
 For the first deploy, you can also run manually on the VPS:
 
