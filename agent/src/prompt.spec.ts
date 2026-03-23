@@ -34,6 +34,11 @@ describe('buildSystemPrompt', () => {
     expect(result).not.toContain('native language')
   })
 
+  it('includes feedback tool instruction', () => {
+    const result = buildSystemPrompt('French', 'beginner', undefined)
+    expect(result).toContain('provide_feedback')
+  })
+
   it('returns a multi-line string', () => {
     const result = buildSystemPrompt('French', 'beginner', undefined)
     expect(result).toContain('\n')

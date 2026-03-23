@@ -4,6 +4,7 @@ import type * as google from '@livekit/agents-plugin-google'
 import { Cause, Effect, Exit, Fiber, Layer, Logger, LogLevel, Option, TestClock } from 'effect'
 import { beforeEach, describe, expect, type MockInstance, vi } from 'vitest'
 import { TutorConfig, type TutorConfigShape } from './config.js'
+import { feedbackTools } from './feedback.js'
 import { GeminiModel } from './gemini.js'
 import { LiveKitSession, LiveKitSessionLive } from './session.js'
 
@@ -24,13 +25,17 @@ const { AgentSessionMock, AgentMock } = vi.hoisted(() => {
   return { AgentSessionMock, AgentMock }
 })
 
-vi.mock('@livekit/agents', () => ({
-  voice: {
-    AgentSession: AgentSessionMock,
-    Agent: AgentMock,
-    AgentSessionEventTypes: { Error: 'error', Close: 'close' }
+vi.mock('@livekit/agents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@livekit/agents')>()
+  return {
+    ...actual,
+    voice: {
+      AgentSession: AgentSessionMock,
+      Agent: AgentMock,
+      AgentSessionEventTypes: { Error: 'error', Close: 'close' }
+    }
   }
-}))
+})
 
 // --- Test fixtures ---
 
@@ -84,7 +89,7 @@ describe('LiveKitSessionLive', () => {
 
         const startCall = AgentSessionMock.proto.start.mock.calls[0]?.[0]
         expect(startCall.room).toBe(ctx.room)
-        expect(AgentMock).toHaveBeenCalledWith({ instructions: 'test system prompt' })
+        expect(AgentMock).toHaveBeenCalledWith({ instructions: 'test system prompt', tools: feedbackTools })
       })
     )
 

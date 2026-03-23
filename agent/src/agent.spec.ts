@@ -3,22 +3,26 @@ import type { JobContext } from '@livekit/agents'
 import { Cause, Effect, Exit, Fiber, Logger, LogLevel, Option, TestClock } from 'effect'
 import { beforeEach, describe, expect, vi } from 'vitest'
 
-vi.mock('@livekit/agents', () => ({
-  defineAgent: vi.fn((config: unknown) => config),
-  cli: { runApp: vi.fn() },
-  ServerOptions: vi.fn(),
-  isAPIError: vi.fn(() => false),
-  voice: {
-    AgentSession: vi.fn(() => ({
-      start: vi.fn().mockResolvedValue(undefined),
-      generateReply: vi.fn(),
-      close: vi.fn().mockResolvedValue(undefined),
-      on: vi.fn()
-    })),
-    Agent: vi.fn(),
-    AgentSessionEventTypes: { Error: 'error', Close: 'close' }
+vi.mock('@livekit/agents', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@livekit/agents')>()
+  return {
+    ...actual,
+    defineAgent: vi.fn((config: unknown) => config),
+    cli: { runApp: vi.fn() },
+    ServerOptions: vi.fn(),
+    isAPIError: vi.fn(() => false),
+    voice: {
+      AgentSession: vi.fn(() => ({
+        start: vi.fn().mockResolvedValue(undefined),
+        generateReply: vi.fn(),
+        close: vi.fn().mockResolvedValue(undefined),
+        on: vi.fn()
+      })),
+      Agent: vi.fn(),
+      AgentSessionEventTypes: { Error: 'error', Close: 'close' }
+    }
   }
-}))
+})
 
 vi.mock('@livekit/agents-plugin-google', () => ({
   beta: {

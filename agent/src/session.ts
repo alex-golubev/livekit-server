@@ -4,6 +4,7 @@ import type * as google from '@livekit/agents-plugin-google'
 import { Cause, Context, Effect, Layer, Option, Ref, Runtime } from 'effect'
 import { TutorConfig, type TutorConfigShape } from './config.js'
 import { SessionStartError, TimeoutError } from './errors.js'
+import { feedbackTools } from './feedback.js'
 import { GeminiModel } from './gemini.js'
 
 /** Timeout for the full session start pipeline (connect to Gemini and initial greeting). */
@@ -70,7 +71,8 @@ const startAgentSession = (session: voice.AgentSession, ctx: JobContext, systemP
       session.start({
         room: ctx.room,
         agent: new voice.Agent({
-          instructions: systemPrompt
+          instructions: systemPrompt,
+          tools: feedbackTools
         })
       }),
     catch: (cause) => new SessionStartError({ message: 'Failed to start AgentSession', cause })
