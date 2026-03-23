@@ -144,9 +144,7 @@ describe('makeTutorConfigLive', () => {
 describe('ModelConfigLive', () => {
   describe('model and voice from env', () => {
     effectIt.effect('defaults model when GEMINI_MODEL is unset', () =>
-      modelConfigField('model').pipe(
-        Effect.tap((model) => expect(model).toBe('gemini-live-2.5-flash-native-audio'))
-      )
+      modelConfigField('model').pipe(Effect.tap((model) => expect(model).toBe('gemini-live-2.5-flash-native-audio')))
     )
 
     effectIt.effect('reads model from GEMINI_MODEL env', () => {
