@@ -16,6 +16,8 @@ export interface ModelConfigShape {
   readonly model: string
   readonly voice: string
   readonly temperature: number
+  readonly project: string
+  readonly location: string
 }
 
 /** Effect Service providing Gemini model parameters from environment variables. */
@@ -38,12 +40,10 @@ export interface TutorConfigShape {
 export class TutorConfig extends Context.Tag('TutorConfig')<TutorConfig, TutorConfigShape>() {}
 
 const DEFAULTS = {
-  // Latest Gemini API native audio model. No stable/GA variant exists yet
-  // (only VertexAI has GA as 'gemini-live-2.5-flash-native-audio').
-  // Track deprecations: https://ai.google.dev/gemini-api/docs/deprecations
-  model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+  model: 'gemini-live-2.5-flash-native-audio',
   voice: 'Kore',
-  temperature: 0.8
+  temperature: 0.8,
+  location: 'us-central1'
 } as const
 
 /** Pre-computed set for O(1) level validation. */
@@ -113,7 +113,9 @@ export const ModelConfigLive: Layer.Layer<ModelConfig> = Layer.effect(
   Effect.sync(() => ({
     model: envOrDefault('GEMINI_MODEL', DEFAULTS.model),
     voice: envOrDefault('GEMINI_VOICE', DEFAULTS.voice),
-    temperature: parseTemperature(process.env.GEMINI_TEMPERATURE)
+    temperature: parseTemperature(process.env.GEMINI_TEMPERATURE),
+    project: process.env.GOOGLE_CLOUD_PROJECT ?? '',
+    location: envOrDefault('GOOGLE_CLOUD_LOCATION', DEFAULTS.location)
   }))
 )
 

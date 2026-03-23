@@ -145,7 +145,7 @@ describe('ModelConfigLive', () => {
   describe('model and voice from env', () => {
     effectIt.effect('defaults model when GEMINI_MODEL is unset', () =>
       modelConfigField('model').pipe(
-        Effect.tap((model) => expect(model).toBe('gemini-2.5-flash-native-audio-preview-12-2025'))
+        Effect.tap((model) => expect(model).toBe('gemini-live-2.5-flash-native-audio'))
       )
     )
 
@@ -202,6 +202,26 @@ describe('ModelConfigLive', () => {
     effectIt.effect('accepts boundary value 2', () => {
       vi.stubEnv('GEMINI_TEMPERATURE', '2')
       return modelConfigField('temperature').pipe(Effect.tap((t) => expect(t).toBe(2)))
+    })
+  })
+
+  describe('project and location from env', () => {
+    effectIt.effect('reads project from GOOGLE_CLOUD_PROJECT', () => {
+      vi.stubEnv('GOOGLE_CLOUD_PROJECT', 'my-project')
+      return modelConfigField('project').pipe(Effect.tap((p) => expect(p).toBe('my-project')))
+    })
+
+    effectIt.effect('defaults project to empty string when unset', () =>
+      modelConfigField('project').pipe(Effect.tap((p) => expect(p).toBe('')))
+    )
+
+    effectIt.effect('defaults location to us-central1 when unset', () =>
+      modelConfigField('location').pipe(Effect.tap((l) => expect(l).toBe('us-central1')))
+    )
+
+    effectIt.effect('reads location from GOOGLE_CLOUD_LOCATION', () => {
+      vi.stubEnv('GOOGLE_CLOUD_LOCATION', 'europe-west1')
+      return modelConfigField('location').pipe(Effect.tap((l) => expect(l).toBe('europe-west1')))
     })
   })
 })

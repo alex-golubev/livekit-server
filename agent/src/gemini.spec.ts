@@ -19,7 +19,9 @@ vi.mock('@livekit/agents-plugin-google', () => ({
 const testModelConfig: ModelConfigShape = {
   model: 'test-model',
   voice: 'TestVoice',
-  temperature: 0.5
+  temperature: 0.5,
+  project: 'test-project',
+  location: 'us-central1'
 }
 
 const TestModelConfig = Layer.succeed(ModelConfig, testModelConfig)
@@ -36,7 +38,11 @@ describe('GeminiModelLive', () => {
         model: 'test-model',
         voice: 'TestVoice',
         temperature: 0.5,
+        vertexai: true,
+        project: 'test-project',
+        location: 'us-central1',
         enableAffectiveDialog: true,
+        apiVersion: 'v1beta1',
         inputAudioTranscription: {},
         outputAudioTranscription: {}
       })

@@ -58,11 +58,15 @@ services:
     image: ghcr.io/alex-golubev/livekit-agent:latest
     restart: unless-stopped
     stop_grace_period: 15m
+    volumes:
+      - ./credentials.json:/app/credentials.json:ro
     environment:
       - LIVEKIT_URL=ws://livekit-server:7880
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT}
+      - GOOGLE_CLOUD_LOCATION=${GOOGLE_CLOUD_LOCATION:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-}
       - GEMINI_VOICE=${GEMINI_VOICE:-}
       - GEMINI_TEMPERATURE=${GEMINI_TEMPERATURE:-}

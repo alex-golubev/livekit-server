@@ -27,7 +27,11 @@ export const GeminiModelLive: Layer.Layer<GeminiModel, GeminiConnectionError, Mo
             model: config.model,
             voice: config.voice,
             temperature: config.temperature,
+            vertexai: true,
+            project: config.project,
+            location: config.location,
             enableAffectiveDialog: true,
+            apiVersion: 'v1beta1',
             inputAudioTranscription: {},
             outputAudioTranscription: {}
           }),
