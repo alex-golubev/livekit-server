@@ -42,5 +42,5 @@ export const buildSystemPrompt = (
 /** Generates the initial greeting prompt. */
 export const buildGreetingPrompt = (language: string, level: StudentLevel): string => {
   const length = level === 'beginner' ? 'one short sentence' : '1-2 sentences'
-  return `Greet the user warmly in ${language} (${length}) and casually mention something you've been thinking about or interested in lately to get the conversation started.`
+  return `Greet the user warmly in ${language} (${length}) and casually mention something you've been thinking about or interested in lately to get the conversation started. Do NOT call provide_feedback — the student has not spoken yet.`
 }

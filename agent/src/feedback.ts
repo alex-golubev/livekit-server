@@ -1,5 +1,5 @@
 import { llm } from '@livekit/agents'
-import { JSONSchema, Schema } from 'effect'
+import { Context, Effect, JSONSchema, Runtime, Schema } from 'effect'
 
 /** Score from 1 (poor) to 5 (excellent). */
 const Score = Schema.Int.pipe(Schema.greaterThanOrEqualTo(1), Schema.lessThanOrEqualTo(5))
@@ -24,19 +24,31 @@ export const FeedbackParams = Schema.Struct({
 /** JSON Schema derived from FeedbackParams for the LiveKit tool registration. */
 const feedbackJsonSchema = JSONSchema.make(FeedbackParams)
 
-/** Feedback tool for silent speech evaluation via Gemini function calling. */
-const provideFeedback = llm.tool({
-  description:
-    "Silently evaluate the student's most recent speech. " +
-    'Call this after each student response to track their progress. ' +
-    'Do NOT mention the evaluation to the student.',
-  parameters: feedbackJsonSchema,
-  execute: async () => {
-    return ''
-  }
-})
+/**
+ * Effect Service for publishing feedback data to a consumer (e.g. client via data channel).
+ *
+ * Decouples the feedback tool from the transport mechanism — the tool calls
+ * {@link publish}, and the concrete implementation decides how to deliver.
+ */
+export class FeedbackSink extends Context.Tag('FeedbackSink')<
+  FeedbackSink,
+  { readonly publish: (data: typeof FeedbackParams.Type) => Effect.Effect<void> }
+>() {}
 
-/** Tool context for the voice agent session. */
-export const feedbackTools: llm.ToolContext = {
-  provide_feedback: provideFeedback
-}
+/** Creates feedback tools wired to a {@link FeedbackSink} via the provided runtime. */
+export const makeFeedbackTools = (rt: Runtime.Runtime<FeedbackSink>): llm.ToolContext => ({
+  provide_feedback: llm.tool({
+    description:
+      "Silently evaluate the student's most recent speech. " +
+      'Call this after each student response to track their progress. ' +
+      'Do NOT mention the evaluation to the student.',
+    parameters: feedbackJsonSchema,
+    execute: (params) =>
+      Runtime.runPromise(rt)(
+        Schema.decodeUnknown(FeedbackParams)(params).pipe(
+          Effect.flatMap((data) => FeedbackSink.pipe(Effect.flatMap((sink) => sink.publish(data)))),
+          Effect.asVoid
+        )
+      )
+  })
+})

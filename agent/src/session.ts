@@ -1,10 +1,10 @@
 import type { JobContext } from '@livekit/agents'
-import { voice } from '@livekit/agents'
+import { type llm, voice } from '@livekit/agents'
 import type * as google from '@livekit/agents-plugin-google'
 import { Cause, Context, Effect, Layer, Option, Ref, Runtime } from 'effect'
 import { TutorConfig, type TutorConfigShape } from './config.js'
 import { SessionStartError, TimeoutError } from './errors.js'
-import { feedbackTools } from './feedback.js'
+import { FeedbackSink, makeFeedbackTools } from './feedback.js'
 import { GeminiModel } from './gemini.js'
 
 /** Timeout for the full session start pipeline (connect to Gemini and initial greeting). */
@@ -65,14 +65,19 @@ export class LiveKitSession extends Context.Tag('LiveKitSession')<
 /**
  * Starts the LiveKit AgentSession and connects it to the room.
  */
-const startAgentSession = (session: voice.AgentSession, ctx: JobContext, systemPrompt: string) =>
+const startAgentSession = (
+  session: voice.AgentSession,
+  ctx: JobContext,
+  systemPrompt: string,
+  tools: llm.ToolContext
+) =>
   Effect.tryPromise({
     try: () =>
       session.start({
         room: ctx.room,
         agent: new voice.Agent({
           instructions: systemPrompt,
-          tools: feedbackTools
+          tools
         })
       }),
     catch: (cause) => new SessionStartError({ message: 'Failed to start AgentSession', cause })
@@ -131,18 +136,37 @@ const registerSessionMonitoring = (session: voice.AgentSession, rt: Runtime.Runt
     })
   })
 
+/** Creates a {@link FeedbackSink} that publishes feedback JSON via the room data channel. */
+const makeFeedbackSinkLive = (room: JobContext['room']): Context.Tag.Service<typeof FeedbackSink> => ({
+  publish: (data) =>
+    Option.fromNullable(room.localParticipant).pipe(
+      Option.match({
+        onNone: () => Effect.logWarning('Cannot publish feedback: no localParticipant'),
+        onSome: (lp) =>
+          Effect.tryPromise(() => {
+            const payload = new TextEncoder().encode(JSON.stringify({ type: 'feedback', data }))
+            return lp.publishData(payload, { reliable: true, topic: 'feedback' })
+          }).pipe(
+            Effect.tapError((error) => Effect.logWarning('Failed to publish feedback', { error })),
+            Effect.ignore
+          )
+      })
+    )
+})
+
 /**
  * Happy-path startup: connect to a room, generate greeting, register shutdown callback.
  *
  * Pure business logic — no resource tracking, no timeout, no error recovery.
- * Captures the Effect {@link Runtime} once for both monitoring and shutdown.
+ * Captures the Effect {@link Runtime} once for both monitoring, shutdown, and feedback tools.
  */
 const runStartup =
   (config: TutorConfigShape, realtimeModel: google.beta.realtime.RealtimeModel, ctx: JobContext) =>
   (session: voice.AgentSession) =>
-    Effect.runtime<never>().pipe(
-      Effect.flatMap((rt) =>
-        startAgentSession(session, ctx, config.systemPrompt).pipe(
+    Effect.runtime<FeedbackSink>().pipe(
+      Effect.flatMap((rt) => {
+        const tools = makeFeedbackTools(rt)
+        return startAgentSession(session, ctx, config.systemPrompt, tools).pipe(
           Effect.andThen(registerSessionMonitoring(session, rt)),
           Effect.andThen(generateInitialGreeting(session, config.greetingPrompt)),
           // Register model cleanup for a graceful shutdown.
@@ -152,7 +176,7 @@ const runStartup =
             Effect.sync(() => ctx.addShutdownCallback(() => Runtime.runPromise(rt)(closeRealtimeModel(realtimeModel))))
           )
         )
-      )
+      })
     )
 
 /** Closes both resources on startup failure. Logs the cause, ignores close() errors. */
@@ -200,7 +224,8 @@ const makeStart =
                 operation: 'sessionStart'
               })
           }),
-          Effect.tapErrorCause(cleanupResources(sessionRef, realtimeModel))
+          Effect.tapErrorCause(cleanupResources(sessionRef, realtimeModel)),
+          Effect.provide(Layer.succeed(FeedbackSink, makeFeedbackSinkLive(ctx.room)))
         )
       )
     )

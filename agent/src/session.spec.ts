@@ -4,7 +4,6 @@ import type * as google from '@livekit/agents-plugin-google'
 import { Cause, Effect, Exit, Fiber, Layer, Logger, LogLevel, Option, TestClock } from 'effect'
 import { beforeEach, describe, expect, type MockInstance, vi } from 'vitest'
 import { TutorConfig, type TutorConfigShape } from './config.js'
-import { feedbackTools } from './feedback.js'
 import { GeminiModel } from './gemini.js'
 import { LiveKitSession, LiveKitSessionLive } from './session.js'
 
@@ -54,7 +53,10 @@ const mockRealtimeModel = () =>
 
 const mockJobContext = () =>
   ({
-    room: { name: 'test-room' },
+    room: {
+      name: 'test-room',
+      localParticipant: { publishData: vi.fn().mockResolvedValue(undefined) }
+    },
     addShutdownCallback: vi.fn()
   }) as unknown as JobContext
 
@@ -89,7 +91,9 @@ describe('LiveKitSessionLive', () => {
 
         const startCall = AgentSessionMock.proto.start.mock.calls[0]?.[0]
         expect(startCall.room).toBe(ctx.room)
-        expect(AgentMock).toHaveBeenCalledWith({ instructions: 'test system prompt', tools: feedbackTools })
+        const agentCall = AgentMock.mock.calls[0]?.[0]
+        expect(agentCall.instructions).toBe('test system prompt')
+        expect(agentCall.tools).toHaveProperty('provide_feedback')
       })
     )
 
