@@ -18,6 +18,8 @@ export interface ModelConfigShape {
   readonly temperature: number
   readonly project: string
   readonly location: string
+  readonly language: string | undefined
+  readonly transcriptionLanguageCodes: ReadonlyArray<string> | undefined
 }
 
 /** Effect Service providing Gemini model parameters from environment variables. */
@@ -84,6 +86,36 @@ const parseTemperature = (raw: string | undefined): number =>
     Option.getOrElse(() => DEFAULTS.temperature)
   )
 
+/** Parses an optional BCP-47 language code from env. */
+const parseLanguage = (raw: string | undefined): string | undefined =>
+  Option.fromNullable(raw).pipe(
+    Option.map((s) => s.trim()),
+    Option.filter((s) => s !== ''),
+    Option.getOrUndefined
+  )
+
+/**
+ * Parses comma-separated BCP-47 language codes from env.
+ * Falls back to `[language]` when explicit codes are not provided.
+ */
+const parseTranscriptionLanguageCodes = (
+  raw: string | undefined,
+  language: string | undefined
+): ReadonlyArray<string> | undefined => {
+  const parsed = Option.fromNullable(raw).pipe(
+    Option.map((value) =>
+      value
+        .split(',')
+        .map((code) => code.trim())
+        .filter((code) => code !== '')
+    ),
+    Option.filter((codes) => codes.length > 0),
+    Option.getOrUndefined
+  )
+
+  return parsed ?? (language ? [language] : undefined)
+}
+
 /**
  * Extracts target language from attributes or fails with ConfigError.
  */
@@ -110,13 +142,21 @@ const extractLanguage = (attributes: Record<string, string>) =>
  */
 export const ModelConfigLive: Layer.Layer<ModelConfig> = Layer.effect(
   ModelConfig,
-  Effect.sync(() => ({
-    model: envOrDefault('GEMINI_MODEL', DEFAULTS.model),
-    voice: envOrDefault('GEMINI_VOICE', DEFAULTS.voice),
-    temperature: parseTemperature(process.env.GEMINI_TEMPERATURE),
-    project: process.env.GOOGLE_CLOUD_PROJECT ?? '',
-    location: envOrDefault('GOOGLE_CLOUD_LOCATION', DEFAULTS.location)
-  }))
+  Effect.sync(() => {
+    const language = parseLanguage(process.env.GEMINI_LANGUAGE)
+    return {
+      model: envOrDefault('GEMINI_MODEL', DEFAULTS.model),
+      voice: envOrDefault('GEMINI_VOICE', DEFAULTS.voice),
+      temperature: parseTemperature(process.env.GEMINI_TEMPERATURE),
+      project: process.env.GOOGLE_CLOUD_PROJECT ?? '',
+      location: envOrDefault('GOOGLE_CLOUD_LOCATION', DEFAULTS.location),
+      language,
+      transcriptionLanguageCodes: parseTranscriptionLanguageCodes(
+        process.env.GEMINI_TRANSCRIPTION_LANGUAGE_CODES,
+        language
+      )
+    }
+  })
 )
 
 /**

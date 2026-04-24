@@ -21,7 +21,9 @@ const testModelConfig: ModelConfigShape = {
   voice: 'TestVoice',
   temperature: 0.5,
   project: 'test-project',
-  location: 'us-central1'
+  location: 'us-central1',
+  language: 'he-IL',
+  transcriptionLanguageCodes: ['he-IL']
 }
 
 const TestModelConfig = Layer.succeed(ModelConfig, testModelConfig)
@@ -37,14 +39,15 @@ describe('GeminiModelLive', () => {
       expect(RealtimeModelMock).toHaveBeenCalledWith({
         model: 'test-model',
         voice: 'TestVoice',
+        language: 'he-IL',
         temperature: 0.5,
         vertexai: true,
         project: 'test-project',
         location: 'us-central1',
         enableAffectiveDialog: true,
         apiVersion: 'v1beta1',
-        inputAudioTranscription: {},
-        outputAudioTranscription: {}
+        inputAudioTranscription: { languageCodes: ['he-IL'] },
+        outputAudioTranscription: { languageCodes: ['he-IL'] }
       })
     })
   )

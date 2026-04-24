@@ -11,6 +11,9 @@ import { GeminiConnectionError } from './errors.js'
  */
 export class GeminiModel extends Context.Tag('GeminiModel')<GeminiModel, google.beta.realtime.RealtimeModel>() {}
 
+/** Temporary experiment: force Hebrew language/script hints for Live API transcription. */
+const FORCED_TRANSCRIPTION_LANGUAGE = 'he-IL' as const
+
 /**
  * Live Layer for {@link GeminiModel}.
  *
@@ -26,14 +29,15 @@ export const GeminiModelLive: Layer.Layer<GeminiModel, GeminiConnectionError, Mo
           new google.beta.realtime.RealtimeModel({
             model: config.model,
             voice: config.voice,
+            language: FORCED_TRANSCRIPTION_LANGUAGE,
             temperature: config.temperature,
             vertexai: true,
             project: config.project,
             location: config.location,
             enableAffectiveDialog: true,
             apiVersion: 'v1beta1',
-            inputAudioTranscription: {},
-            outputAudioTranscription: {}
+            inputAudioTranscription: { languageCodes: [FORCED_TRANSCRIPTION_LANGUAGE] },
+            outputAudioTranscription: { languageCodes: [FORCED_TRANSCRIPTION_LANGUAGE] }
           }),
         catch: (cause) =>
           new GeminiConnectionError({

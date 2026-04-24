@@ -222,4 +222,33 @@ describe('ModelConfigLive', () => {
       return modelConfigField('location').pipe(Effect.tap((l) => expect(l).toBe('europe-west1')))
     })
   })
+
+  describe('language and transcription language codes', () => {
+    effectIt.effect('defaults language to undefined when GEMINI_LANGUAGE is unset', () =>
+      modelConfigField('language').pipe(Effect.tap((value) => expect(value).toBeUndefined()))
+    )
+
+    effectIt.effect('reads GEMINI_LANGUAGE', () => {
+      vi.stubEnv('GEMINI_LANGUAGE', 'he-IL')
+      return modelConfigField('language').pipe(Effect.tap((value) => expect(value).toBe('he-IL')))
+    })
+
+    effectIt.effect('defaults transcriptionLanguageCodes to undefined when language is unset', () =>
+      modelConfigField('transcriptionLanguageCodes').pipe(Effect.tap((value) => expect(value).toBeUndefined()))
+    )
+
+    effectIt.effect('uses GEMINI_LANGUAGE as fallback transcriptionLanguageCodes', () => {
+      vi.stubEnv('GEMINI_LANGUAGE', 'he-IL')
+      return modelConfigField('transcriptionLanguageCodes').pipe(
+        Effect.tap((value) => expect(value).toEqual(['he-IL']))
+      )
+    })
+
+    effectIt.effect('parses comma-separated GEMINI_TRANSCRIPTION_LANGUAGE_CODES', () => {
+      vi.stubEnv('GEMINI_TRANSCRIPTION_LANGUAGE_CODES', 'he-IL, en-US ,fr-FR')
+      return modelConfigField('transcriptionLanguageCodes').pipe(
+        Effect.tap((value) => expect(value).toEqual(['he-IL', 'en-US', 'fr-FR']))
+      )
+    })
+  })
 })
